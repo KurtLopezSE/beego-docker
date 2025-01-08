@@ -2,7 +2,6 @@ package db
 
 import (
 	"fmt"
-	"new-beego-api/models"
 
 	"github.com/beego/beego/v2/client/orm"
 	"github.com/beego/beego/v2/core/logs"
@@ -31,9 +30,6 @@ func Init() {
 		logs.Error("Failed to register database:", err)
 		return
 	}
-
-	// Register models
-	orm.RegisterModel(new(models.User))
 
 	// Create tables
 	err = orm.RunSyncdb("default", false, true)

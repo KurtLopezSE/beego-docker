@@ -13,8 +13,6 @@ services:
       - DB_PASSWORD=postgres
       - DB_NAME=new-beego-api
       - DB_PORT=5432
-    networks:
-      - beego-network
 
   db:
     image: postgres:15
@@ -26,8 +24,7 @@ services:
       - POSTGRES_DB=new-beego-api
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    networks:
-      - beego-network
+
 
 volumes:
   postgres_data:

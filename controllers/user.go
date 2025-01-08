@@ -8,117 +8,104 @@ import (
 	beego "github.com/beego/beego/v2/server/web"
 )
 
-// Operations about Users
+// UserController handles user-related requests
 type UserController struct {
 	beego.Controller
 	userService *services.UserService
 }
 
+// Prepare initializes the UserService
 func (u *UserController) Prepare() {
 	u.userService = services.NewUserService()
 }
 
-// @Title GetAll
-// @Description get all Users
-// @Success 200 {object} models.User
-// @router / [get]
-func (u *UserController) GetAll() {
-	users := u.userService.GetAll()
-	u.Data["json"] = users
-	u.ServeJSON()
-}
-
-// @Title Get
-// @Description get user by uid
-// @Param	uid		path 	string	true		"The key for staticblock"
-// @Success 200 {object} models.User
-// @Failure 403 :uid is empty
-// @router /:uid [get]
-func (u *UserController) Get() {
-	uid := u.GetString(":uid")
-	if uid != "" {
-		user, err := u.userService.Get(uid)
-		if err != nil {
-			u.Data["json"] = err.Error()
-		} else {
-			u.Data["json"] = user
-		}
-	}
-	u.ServeJSON()
-}
-
-// @Title Post
+// @Title CreateUser
 // @Description create users
 // @Param	body		body 	models.User	true		"body for user content"
-// @Success 200 {string} models.User.Id
+// @Success 200 {object} map[string]interface{}
 // @Failure 403 body is empty
 // @router / [post]
 func (u *UserController) Post() {
 	var user models.User
-	json.Unmarshal(u.Ctx.Input.RequestBody, &user)
-	uid := u.userService.Add(user)
-	u.Data["json"] = map[string]string{"uid": uid}
-	u.ServeJSON()
-}
-
-// @Title Put
-// @Description update the user
-// @Param	uid		path 	string	true		"The uid you want to update"
-// @Param	body		body 	models.User	true		"body for user content"
-// @Success 200 {object} models.User
-// @Failure 403 :uid is not int
-// @router /:uid [put]
-func (u *UserController) Put() {
-	uid := u.GetString(":uid")
-	if uid != "" {
-		var user models.User
-		json.Unmarshal(u.Ctx.Input.RequestBody, &user)
-		uu, err := u.userService.Update(uid, &user)
-		if err != nil {
-			u.Data["json"] = err.Error()
+	if err := json.Unmarshal(u.Ctx.Input.RequestBody, &user); err == nil {
+		id, err := u.userService.AddUser(&user)
+		if err == nil {
+			u.Data["json"] = map[string]interface{}{"id": id}
 		} else {
-			u.Data["json"] = uu
+			u.Data["json"] = err.Error()
 		}
-	}
-	u.ServeJSON()
-}
-
-// @Title Delete
-// @Description delete the user
-// @Param	uid		path 	string	true		"The uid you want to delete"
-// @Success 200 {string} delete success!
-// @Failure 403 uid is empty
-// @router /:uid [delete]
-func (u *UserController) Delete() {
-	uid := u.GetString(":uid")
-	u.userService.Delete(uid)
-	u.Data["json"] = "delete success!"
-	u.ServeJSON()
-}
-
-// @Title Login
-// @Description Logs user into the system
-// @Param	username		query 	string	true		"The username for login"
-// @Param	password		query 	string	true		"The password for login"
-// @Success 200 {string} login success
-// @Failure 403 user not exist
-// @router /login [get]
-func (u *UserController) Login() {
-	username := u.GetString("username")
-	password := u.GetString("password")
-	if u.userService.Login(username, password) {
-		u.Data["json"] = "login success"
 	} else {
-		u.Data["json"] = "user not exist"
+		u.Data["json"] = "Invalid input"
 	}
 	u.ServeJSON()
 }
 
-// @Title logout
-// @Description Logs out current logged in user session
-// @Success 200 {string} logout success
-// @router /logout [get]
-func (u *UserController) Logout() {
-	u.Data["json"] = "logout success"
+// @Title GetUser
+// @Description get user by ID
+// @Param	id		path 	int	true		"The ID of the user"
+// @Success 200 {object} models.User
+// @Failure 404 user not found
+// @router /:id [get]
+func (u *UserController) Get() {
+	id, _ := u.GetInt64(":id")
+	user, err := u.userService.GetUser(id)
+	if err != nil {
+		u.Data["json"] = err.Error()
+	} else {
+		u.Data["json"] = user
+	}
+	u.ServeJSON()
+}
+
+// @Title GetAllUsers
+// @Description get all users
+// @Success 200 {array} models.User
+// @router / [get]
+func (u *UserController) GetAll() {
+	users, err := u.userService.GetAllUsers()
+	if err != nil {
+		u.Data["json"] = err.Error()
+	} else {
+		u.Data["json"] = users
+	}
+	u.ServeJSON()
+}
+
+// @Title UpdateUser
+// @Description update the user
+// @Param	id		path 	int	true		"The ID of the user"
+// @Param	body		body 	models.User	true		"body for user content"
+// @Success 200 {string} "User updated successfully"
+// @Failure 403 invalid input
+// @router /:id [put]
+func (u *UserController) Put() {
+	id, _ := u.GetInt64(":id")
+	var user models.User
+	if err := json.Unmarshal(u.Ctx.Input.RequestBody, &user); err == nil {
+		user.Id = id
+		if err := u.userService.UpdateUser(&user); err == nil {
+			u.Data["json"] = "User updated successfully"
+		} else {
+			u.Data["json"] = err.Error()
+		}
+	} else {
+		u.Data["json"] = "Invalid input"
+	}
+	u.ServeJSON()
+}
+
+// @Title DeleteUser
+// @Description delete the user
+// @Param	id		path 	int	true		"The ID of the user"
+// @Success 200 {string} "User deleted successfully"
+// @Failure 404 user not found
+// @router /:id [delete]
+func (u *UserController) Delete() {
+	id, _ := u.GetInt64(":id")
+	if err := u.userService.DeleteUser(id); err == nil {
+		u.Data["json"] = "User deleted successfully"
+	} else {
+		u.Data["json"] = err.Error()
+	}
 	u.ServeJSON()
 }
